@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Statware WebAR — Transformador</title>
+
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; }
+    #ui {
+      position: fixed; z-index: 10; left: 0; right: 0; top: 0;
+      display: flex; justify-content: center; pointer-events: none; padding: 14px;
+    }
+    #estado {
+      background: rgba(5, 75, 115, 0.92); color: #fff;
+      padding: 10px 16px; border-radius: 999px;
+      font-size: 14px; font-weight: 600; letter-spacing: .2px;
+      box-shadow: 0 4px 14px rgba(0,0,0,.25);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="ui"><div id="estado">Iniciando cámara…</div></div>
+
+  <!-- imageTargetSrc AHORA apunta a TU marcador compilado (targets.mind) -->
+  <a-scene
+    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiScanning: yes; uiLoading: no;"
+    color-space="sRGB"
+    renderer="colorManagement: true; physicallyCorrectLights: true"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+
+    <a-assets>
+      <!-- El modelo real de Josue. OJO: el nombre debe coincidir EXACTO
+           con el archivo en tu repo (respeta mayusculas y guion bajo). -->
+      <a-asset-item id="transformador" src="./Transformador_Hospital.glb"></a-asset-item>
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <a-entity mindar-image-target="targetIndex: 0">
+
+      <!-- ============================================================
+           EL MODELO. Estos tres valores son los que vas a TUNEAR:
+
+           scale   -> tamano. Si sale gigante baja a 0.2 / 0.1;
+                      si sale chico sube a 1 / 2 / 3.
+           rotation-> orientacion. Si sale ACOSTADO, cambia a "-90 0 0".
+                      Si sale de espaldas, prueba "0 180 0".
+           position-> "x y z". El tercer numero (z) lo empuja hacia el
+                      visitante, despegandolo de la lona. Sube y (2do
+                      numero) si quieres levantarlo del centro del marcador.
+           ============================================================ -->
+      <a-gltf-model
+        src="#transformador"
+        scale="0.5 0.5 0.5"
+        rotation="0 0 0"
+        position="0 0 0.3">
+      </a-gltf-model>
+
+      <!-- Cuando ya tengas escala/orientacion bien, descomenta esto para
+           que gire lento sobre su eje:
+      <a-entity animation="property: rotation; to: 0 360 0; loop: true; dur: 12000; easing: linear">
+        ... (mueve el <a-gltf-model> aqui dentro) ...
+      </a-entity>
+      -->
+
+      <!-- Luz para que el PBR del modelo se vea con volumen -->
+      <a-entity light="type: ambient; intensity: 1.0"></a-entity>
+      <a-entity light="type: directional; intensity: 0.8" position="1 2 2"></a-entity>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    const estado = document.getElementById('estado');
+    window.addEventListener('load', () => {
+      const target = document.querySelector('[mindar-image-target]');
+      const sceneEl = document.querySelector('a-scene');
+      sceneEl.addEventListener('renderstart', () => { estado.textContent = 'Buscando marcador...'; });
+      target.addEventListener('targetFound', () => {
+        estado.textContent = 'Marcador detectado';
+        estado.style.background = 'rgba(25, 110, 159, 0.95)';
+      });
+      target.addEventListener('targetLost', () => {
+        estado.textContent = 'Buscando marcador...';
+        estado.style.background = 'rgba(5, 75, 115, 0.92)';
+      });
+    });
+  </script>
+</body>
+</html>
