@@ -4,10 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>Statware WebAR — Transformador</title>
-
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: system-ui, sans-serif; }
@@ -21,11 +19,22 @@
       font-size: 14px; font-weight: 600; letter-spacing: .2px;
       box-shadow: 0 4px 14px rgba(0,0,0,.25);
     }
+    /* Badge de version: abajo a la derecha, siempre encima de todo */
+    #version {
+      position: fixed; z-index: 10; right: 10px; bottom: 10px;
+      background: rgba(0,0,0,0.65); color: #6fe0c8;
+      padding: 5px 10px; border-radius: 8px;
+      font-size: 12px; font-weight: 700; font-family: monospace;
+      pointer-events: none; letter-spacing: .5px;
+    }
   </style>
 </head>
 <body>
-
   <div id="ui"><div id="estado">Iniciando cámara…</div></div>
+
+  <!-- ▼▼▼ SUBE ESTE NUMERO A MANO CADA VEZ QUE HAGAS UN CAMBIO ▼▼▼ -->
+  <div id="version">v3</div>
+  <!-- ▲▲▲ asi sabes en el cel si estas viendo tu ultimo cambio o cache ▲▲▲ -->
 
   <!-- imageTargetSrc AHORA apunta a TU marcador compilado (targets.mind) -->
   <a-scene
@@ -34,20 +43,15 @@
     renderer="colorManagement: true; physicallyCorrectLights: false"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
-
     <a-assets>
       <!-- El modelo real de Josue. OJO: el nombre debe coincidir EXACTO
            con el archivo en tu repo (respeta mayusculas y guion bajo). -->
       <a-asset-item id="transformador" src="./Transformador_Hospital.glb"></a-asset-item>
     </a-assets>
-
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
     <a-entity mindar-image-target="targetIndex: 0">
-
       <!-- ============================================================
            EL MODELO. Estos tres valores son los que vas a TUNEAR:
-
            scale   -> tamano. Si sale gigante baja a 0.2 / 0.1;
                       si sale chico sube a 1 / 2 / 3.
            rotation-> orientacion. Si sale ACOSTADO, cambia a "-90 0 0".
@@ -62,21 +66,18 @@
         rotation="0 0 0"
         position="0 0 0.3">
       </a-gltf-model>
-
       <!-- Cuando ya tengas escala/orientacion bien, descomenta esto para
            que gire lento sobre su eje:
       <a-entity animation="property: rotation; to: 0 360 0; loop: true; dur: 12000; easing: linear">
         ... (mueve el <a-gltf-model> aqui dentro) ...
       </a-entity>
       -->
-
       <!-- Luz para que el PBR del modelo se vea con volumen -->
       <a-entity light="type: ambient; intensity: 2.5"></a-entity>
       <a-entity light="type: directional; intensity: 1.5" position="1 2 2"></a-entity>
       <a-entity light="type: directional; intensity: 1.0" position="-1 1 -1"></a-entity>
     </a-entity>
   </a-scene>
-
   <script>
     const estado = document.getElementById('estado');
     window.addEventListener('load', () => {
