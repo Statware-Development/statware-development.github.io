@@ -38,7 +38,7 @@
 
   <!-- imageTargetSrc AHORA apunta a TU marcador compilado (targets.mind) -->
   <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiScanning: yes; uiLoading: no; filterMinCF: 0.0001; filterBeta: 1000; missTolerance: 15; warmupTolerance: 3;"
+    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiScanning: yes; uiLoading: no; filterMinCF: 0.001; filterBeta: 1000; missTolerance: 15; warmupTolerance: 3;"
     color-space="sRGB"
     renderer="colorManagement: true; physicallyCorrectLights: false"
     vr-mode-ui="enabled: false"
@@ -62,9 +62,9 @@
            ============================================================ -->
       <a-gltf-model
         src="#transformador"
-        scale="0.5 0.5 0.5"
+        scale="1 1 1"
         rotation="0 0 0"
-        position="0 0 0.3">
+        position="0 0 0">
       </a-gltf-model>
       <!-- Cuando ya tengas escala/orientacion bien, descomenta esto para
            que gire lento sobre su eje:
