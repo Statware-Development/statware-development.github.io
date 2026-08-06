@@ -33,12 +33,12 @@
   <div id="ui"><div id="estado">Iniciando cámara…</div></div>
 
   <!-- ▼▼▼ SUBE ESTE NUMERO A MANO CADA VEZ QUE HAGAS UN CAMBIO ▼▼▼ -->
-  <div id="version">v0.4</div>
+  <div id="version">v0.5</div>
   <!-- ▲▲▲ asi sabes en el cel si estas viendo tu ultimo cambio o cache ▲▲▲ -->
 
   <!-- imageTargetSrc AHORA apunta a TU marcador compilado (targets.mind) -->
   <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiScanning: yes; uiLoading: no;"
+    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiScanning: yes; uiLoading: no; filterMinCF: 0.0001; filterBeta: 1000; missTolerance: 15; warmupTolerance: 3;"
     color-space="sRGB"
     renderer="colorManagement: true; physicallyCorrectLights: false"
     vr-mode-ui="enabled: false"
@@ -63,7 +63,7 @@
       <a-gltf-model
         src="#transformador"
         scale="0.5 0.5 0.5"
-        rotation="0 0 0"
+        rotation="180 0 0"
         position="0 0 0.3">
       </a-gltf-model>
       <!-- Cuando ya tengas escala/orientacion bien, descomenta esto para
