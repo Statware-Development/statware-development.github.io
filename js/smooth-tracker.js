@@ -1,31 +1,39 @@
 /**
  * smooth-tracker
  * ---------------------------------------------------------------------------
- * Componente A-Frame que sigue la pose de OTRO entity ("target") aplicando
- * suavizado por frame:
+ * Componente A-Frame que se coloca en el MISMO entity que
+ * [mindar-image-target] y suaviza, EN EL LUGAR, la pose cruda que MindAR
+ * escribe ahi cada frame:
  *   - posicion  -> lerp   (interpolacion lineal)
  *   - rotacion  -> slerp  (interpolacion esferica de cuaterniones)
+ *   - escala    -> lerp   (MindAR codifica su propio factor de escala en la
+ *                          pose; sin suavizarla tambien, el modelo queda del
+ *                          tamano incorrecto)
  *
- * Por que existe: MindAR escribe una matriz nueva en el entity
- * [mindar-image-target] en CADA frame en que detecta el marcador. Esa pose
- * "cruda" puede saltar/temblar un poco (ruido de tracking). En vez de colgar
- * el modelo directamente de ese entity, lo colgamos de este componente, que
- * lee la pose cruda y se mueve gradualmente hacia ella en lugar de saltar
- * de golpe.
+ * Por que "en el lugar" y no copiando a otro entity: MindAR calcula su pose
+ * en un espacio de coordenadas propio (no es "1 unidad = 1 metro"), y esa
+ * pose solo se interpreta bien cuando se compone exactamente como MindAR
+ * espera -el modelo colgado como HIJO de este mismo entity, igual que en la
+ * integracion estandar de mindar-image-aframe-. Intentar reconstruir esa
+ * pose en otro entity separado (mismo padre, distinto arbol) resulto ser
+ * fragil: forzaba a adivinar la convencion exacta de MindAR y termino en
+ * un modelo invisible. Suavizando la MISMA matriz que MindAR ya escribio,
+ * en el mismo entity, evitamos ese problema por completo.
  *
  * Uso:
- *   <a-entity id="raw-target" mindar-image-target="targetIndex: 0"></a-entity>
- *   <a-entity smooth-tracker="target: #raw-target; lerp: 0.25; slerp: 0.25">
- *     ...modelo aqui...
+ *   <a-entity mindar-image-target="targetIndex: 0" smooth-tracker="lerp: 0.25; slerp: 0.25">
+ *     ...modelo aqui, como hijo directo...
  *   </a-entity>
  *
- * IMPORTANTE: el entity con smooth-tracker debe estar al mismo nivel que el
- * target (mismo padre, normalmente <a-scene>) para que las matrices de mundo
- * sean directamente comparables.
+ * Orden de ejecucion: MindAR actualiza la matriz de este entity desde su
+ * SYSTEM (mindar-image-system), que corre ANTES que el tick() de los
+ * componentes de entity dentro del loop de A-Frame. Por eso, cuando este
+ * tick() se ejecuta, la matriz "cruda" de este frame ya esta escrita y
+ * podemos leerla y sobreescribirla con la version suavizada antes de que
+ * se use para el render.
  */
 AFRAME.registerComponent('smooth-tracker', {
   schema: {
-    target: { type: 'selector' },
     // 0 = nunca se mueve, 1 = sin suavizado (copia exacta cada frame).
     // Valores tipicos: 0.15 (muy suave, algo de "lag") a 0.4 (mas reactivo).
     lerp: { type: 'number', default: 0.25 },
@@ -34,42 +42,54 @@ AFRAME.registerComponent('smooth-tracker', {
   },
 
   init: function () {
-    this._targetPos = new THREE.Vector3();
-    this._targetQuat = new THREE.Quaternion();
-    this._targetScale = new THREE.Vector3();
+    this._rawPos = new THREE.Vector3();
+    this._rawQuat = new THREE.Quaternion();
+    this._rawScale = new THREE.Vector3();
+
+    this._smoothPos = new THREE.Vector3();
+    this._smoothQuat = new THREE.Quaternion();
+    this._smoothScale = new THREE.Vector3();
+
     this._hasPose = false;
   },
 
   tick: function (time, deltaMs) {
     if (!this.data.enabled) return;
 
-    const targetEl = this.data.target;
-    if (!targetEl || !targetEl.object3D) return;
-
-    const targetObj = targetEl.object3D;
-    targetObj.updateMatrixWorld(true);
-    targetObj.matrixWorld.decompose(this._targetPos, this._targetQuat, this._targetScale);
-
     const obj = this.el.object3D;
 
-    if (!this._hasPose) {
-      // Primera lectura: "teletransporta" en vez de suavizar, para que el
-      // modelo no aparezca volando desde el origen de la escena.
-      obj.position.copy(this._targetPos);
-      obj.quaternion.copy(this._targetQuat);
-      this._hasPose = true;
+    // Sin marcador visible no hay pose nueva que leer. Ademas, al perderse
+    // el marcador reseteamos _hasPose para que, al reaparecer, hagamos
+    // "snap" en vez de interpolar desde una pose vieja/obsoleta.
+    if (!obj.visible) {
+      this._hasPose = false;
       return;
     }
 
-    // Factor de suavizado independiente del framerate: a mas dt, se
-    // avanza mas hacia el objetivo, para que el resultado se vea igual
-    // en un celular a 30fps que en uno a 60fps.
-    const dt = Math.min(deltaMs || 16.67, 100) / 1000;
-    const posAlpha = 1 - Math.pow(1 - this.data.lerp, dt * 60);
-    const rotAlpha = 1 - Math.pow(1 - this.data.slerp, dt * 60);
+    // MindAR ya escribio la pose cruda de ESTE frame en obj.matrix
+    // (matrixAutoUpdate esta en false, asi que nadie mas la toca).
+    obj.matrix.decompose(this._rawPos, this._rawQuat, this._rawScale);
 
-    obj.position.lerp(this._targetPos, posAlpha);
-    obj.quaternion.slerp(this._targetQuat, rotAlpha);
+    if (!this._hasPose) {
+      this._smoothPos.copy(this._rawPos);
+      this._smoothQuat.copy(this._rawQuat);
+      this._smoothScale.copy(this._rawScale);
+      this._hasPose = true;
+    } else {
+      // Factor de suavizado independiente del framerate: a mas dt, se
+      // avanza mas hacia el objetivo, para que el resultado se vea igual
+      // en un celular a 30fps que en uno a 60fps.
+      const dt = Math.min(deltaMs || 16.67, 100) / 1000;
+      const posAlpha = 1 - Math.pow(1 - this.data.lerp, dt * 60);
+      const rotAlpha = 1 - Math.pow(1 - this.data.slerp, dt * 60);
+
+      this._smoothPos.lerp(this._rawPos, posAlpha);
+      this._smoothQuat.slerp(this._rawQuat, rotAlpha);
+      this._smoothScale.lerp(this._rawScale, posAlpha);
+    }
+
+    obj.matrix.compose(this._smoothPos, this._smoothQuat, this._smoothScale);
+    obj.matrixWorldNeedsUpdate = true;
   },
 
   remove: function () {

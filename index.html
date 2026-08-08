@@ -18,7 +18,7 @@
   <div id="ui"><div id="estado">Iniciando cámara…</div></div>
 
   <!-- ▼▼▼ La version tambien se pisa desde js/app.js (APP_VERSION) ▼▼▼ -->
-  <div id="version">v1.0</div>
+  <div id="version">v1.0.4</div>
 
   <!-- imageTargetSrc apunta al marcador compilado (targets/targets.mind) -->
   <a-scene
@@ -36,19 +36,17 @@
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <!-- ============================================================
-         FUENTE DE POSE CRUDA. MindAR escribe su matriz aqui cada
-         frame que detecta el marcador. Este entity nunca se dibuja
-         directamente: solo se LEE su transform (ver smooth-tracker.js).
-         ============================================================ -->
-    <a-entity id="raw-target" mindar-image-target="targetIndex: 0"></a-entity>
-
-    <!-- ============================================================
-         RAIZ VISUAL. Sigue a #raw-target con suavizado lerp/slerp en
-         vez de copiar su matriz de golpe (menos "temblor" del modelo).
+         MARCADOR + SUAVIZADO. mindar-image-target hace el tracking;
+         smooth-tracker intercepta esa pose cruda cada frame y la
+         suaviza en el lugar (lerp posicion, slerp rotacion, lerp
+         escala) antes de que se use para dibujar a los hijos de este
+         entity. El modelo cuelga de aqui igual que en la integracion
+         estandar de MindAR -eso es lo que garantiza que la pose se
+         interprete en el espacio de coordenadas correcto-.
          Sube lerp/slerp (hasta 1) si lo quieres mas reactivo; bajalo
          (hasta 0.1) si lo quieres mas suave/con mas inercia.
          ============================================================ -->
-    <a-entity id="model-root" smooth-tracker="target: #raw-target; lerp: 0.25; slerp: 0.25" visible="false">
+    <a-entity id="target-anchor" mindar-image-target="targetIndex: 0" smooth-tracker="lerp: 0.25; slerp: 0.25">
       <!-- ============================================================
            EL MODELO. Estos tres valores son los que vas a TUNEAR:
            scale   -> tamano. Si sale gigante baja a 0.2 / 0.1;
@@ -67,6 +65,7 @@
         position="0 -0.1 0.2"
         model-behavior>
       </a-gltf-model>
+
       <!-- Cuando ya tengas escala/orientacion bien, descomenta esto para
            que gire lento sobre su eje:
       <a-entity animation="property: rotation; to: 0 360 0; loop: true; dur: 12000; easing: linear">

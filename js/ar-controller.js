@@ -2,7 +2,7 @@
  * ar-controller
  * ---------------------------------------------------------------------------
  * Conecta los eventos "crudos" de MindAR (targetFound / targetLost sobre
- * #raw-target) con el resto de la app, sin que ni ui.js ni
+ * #target-anchor) con el resto de la app, sin que ni ui.js ni
  * model-controller.js necesiten saber nada de MindAR directamente.
  *
  * Emite eventos propios en `window`:
@@ -10,9 +10,9 @@
  *   statware:target-found  -> el marcador fue detectado
  *   statware:target-lost   -> el marcador se perdio
  *
- * Tambien decide cuando mostrar/ocultar #model-root. La suavizacion de la
- * pose (smooth-tracker.js) sigue corriendo siempre en segundo plano aunque
- * el modelo este oculto, para que al reaparecer no "salte".
+ * MindAR ya se encarga de mostrar/ocultar #target-anchor (y por lo tanto el
+ * modelo, que cuelga de ahi) segun el tracking; este archivo NO toca esa
+ * visibilidad, solo escucha y retransmite.
  */
 (function () {
   function emit(name, detail) {
@@ -21,25 +21,17 @@
 
   function initARController() {
     const sceneEl = document.querySelector('a-scene');
-    const rawTarget = document.getElementById('raw-target');
-    const modelRoot = document.getElementById('model-root');
+    const targetAnchor = document.getElementById('target-anchor');
 
-    if (!sceneEl || !rawTarget || !modelRoot) {
-      console.warn('[ar-controller] No se encontraron los entities esperados (raw-target / model-root).');
+    if (!sceneEl || !targetAnchor) {
+      console.warn('[ar-controller] No se encontro #target-anchor.');
       return;
     }
 
     sceneEl.addEventListener('renderstart', () => emit('statware:ar-ready'));
 
-    rawTarget.addEventListener('targetFound', () => {
-      modelRoot.setAttribute('visible', true);
-      emit('statware:target-found');
-    });
-
-    rawTarget.addEventListener('targetLost', () => {
-      modelRoot.setAttribute('visible', false);
-      emit('statware:target-lost');
-    });
+    targetAnchor.addEventListener('targetFound', () => emit('statware:target-found'));
+    targetAnchor.addEventListener('targetLost', () => emit('statware:target-lost'));
   }
 
   if (document.readyState === 'complete') {
