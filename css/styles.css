@@ -49,3 +49,28 @@ body {
   pointer-events: none;
   letter-spacing: .5px;
 }
+
+/* Botón de lock: está dentro de #ui (que por defecto no recibe clicks),
+   así que le damos `pointer-events: auto` para permitir interacción. */
+#lock-btn {
+  display: none;
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  padding: 10px 14px;
+  z-index: 12;
+  background: #1976d2; /* azul por defecto */
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(23, 115, 204, 0.28);
+  pointer-events: auto;
+}
+
+/* Estado visual cuando el modelo está bloqueado */
+#lock-btn.locked {
+  background: #2ecc71; /* verde */
+  box-shadow: 0 6px 18px rgba(46, 204, 113, 0.28);
+}
