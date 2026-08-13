@@ -9,7 +9,7 @@
  * si estas viendo tu ultimo cambio o cache.
  */
 (function () {
-  const APP_VERSION = 'v1.0.5';
+  const APP_VERSION = 'v1.0.0';
 
   function initApp() {
     const versionEl = document.getElementById('version');
