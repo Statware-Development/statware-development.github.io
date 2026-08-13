@@ -28,7 +28,7 @@ AFRAME.registerComponent('model-behavior', {
   },
 
   init: function () {
-    const scale = this.el.getAttribute('scale') || { x: 1, y: 1, z: 1 };
+    const scale = this.el.getAttribute('scale') || { x: 0.5, y: 0.5, z: 0.5 };
     this._baseScale = `${scale.x} ${scale.y} ${scale.z}`;
 
     this._onFound = this._onFound.bind(this);
