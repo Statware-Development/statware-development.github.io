@@ -1,0 +1,51 @@
+/* Statware WebAR — estilos de interfaz (badge de estado y de version) */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}
+
+#ui {
+  position: fixed;
+  z-index: 10;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  padding: 14px;
+}
+
+#estado {
+  background: rgba(5, 75, 115, 0.92);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: .2px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .25);
+}
+
+/* Badge de version: arriba a la derecha (abajo choca con el boton VR
+   que MindAR/A-Frame dibuja en la esquina inferior derecha) */
+#version {
+  position: fixed;
+  z-index: 10;
+  right: 10px;
+  top: 10px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #6fe0c8;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: monospace;
+  pointer-events: none;
+  letter-spacing: .5px;
+}
