@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Statware · Compilar marcador (.mind)</title>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js"></script>
+<style>
+  :root{ --deep:#054B73; --mid:#196E9F; --purple:#5D46AF; --midnight:#0B1B26 }
+  body{ margin:0; min-height:100vh; background:
+        radial-gradient(120% 90% at 85% 0%, rgba(25,110,159,.28), transparent 60%),
+        var(--midnight); color:#fff; font-family:'Segoe UI',system-ui,sans-serif;
+        display:flex; align-items:center; justify-content:center; padding:28px }
+  .card{ width:100%; max-width:440px; background:rgba(15,32,45,.7);
+         border:1px solid rgba(72,161,213,.3); border-radius:16px; padding:26px }
+  h1{ font-size:20px; margin:0 0 4px; letter-spacing:-.02em }
+  p{ color:#9CC4DC; font-size:13.5px; line-height:1.55; margin:0 0 18px }
+  .drop{ border:2px dashed rgba(72,161,213,.5); border-radius:12px; padding:26px;
+         text-align:center; cursor:pointer; transition:.15s; color:#CFE6F3; font-size:14px }
+  .drop.hot{ background:rgba(25,110,159,.18); border-color:#48A1D5 }
+  img.preview{ display:block; width:100%; border-radius:10px; margin:16px 0 0 }
+  button{ margin-top:16px; width:100%; appearance:none; border:0; cursor:pointer; color:#fff;
+    background:linear-gradient(135deg,var(--mid),var(--purple)); font-size:15px; font-weight:700;
+    padding:13px; border-radius:100px }
+  button:disabled{ opacity:.4; cursor:default }
+  .bar{ height:6px; background:rgba(255,255,255,.12); border-radius:6px; margin-top:16px; overflow:hidden; display:none }
+  .bar i{ display:block; height:100%; width:0; background:linear-gradient(90deg,#196E9F,#48A1D5) }
+  .ok{ color:#7FE0A6; font-size:13px; margin-top:12px; display:none }
+  code{ font-family:ui-monospace,Menlo,Consolas,monospace; background:rgba(0,0,0,.35);
+        padding:2px 6px; border-radius:5px; font-size:12px }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Compilar marcador AR</h1>
+    <p>Sube la imagen del marcador (<code>assets/marker.png</code>) y descarga el archivo
+       <code>targetsBC.mind</code>. Guárdalo en <code>assets/</code> junto a <code>index.html</code>.</p>
+
+    <div class="drop" id="drop">Arrastra la imagen aquí o toca para elegir</div>
+    <input id="file" type="file" accept="image/*" hidden>
+    <img id="preview" class="preview" hidden>
+    <div class="bar" id="bar"><i id="fill"></i></div>
+    <button id="go" disabled>Compilar y descargar .mind</button>
+    <div class="ok" id="ok">✓ Listo. Coloca <code>targetsBC.mind</code> en la carpeta <code>assets/</code>.</div>
+  </div>
+
+<script>
+  const $ = s => document.querySelector(s);
+  const drop=$('#drop'), file=$('#file'), preview=$('#preview'),
+        go=$('#go'), bar=$('#bar'), fill=$('#fill'), ok=$('#ok');
+  let imgEl = null;
+
+  const load = f => {
+    const r = new FileReader();
+    r.onload = e => {
+      preview.src = e.target.result; preview.hidden = false;
+      const im = new Image();
+      im.onload = () => { imgEl = im; go.disabled = false; };
+      im.src = e.target.result;
+    };
+    r.readAsDataURL(f);
+  };
+  drop.onclick = () => file.click();
+  file.onchange = e => e.target.files[0] && load(e.target.files[0]);
+  ['dragover','dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('hot'); }));
+  ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('hot'); }));
+  drop.addEventListener('drop', e => e.dataTransfer.files[0] && load(e.dataTransfer.files[0]));
+
+  go.onclick = async () => {
+    if (!imgEl) return;
+    go.disabled = true; bar.style.display = 'block'; ok.style.display = 'none';
+    const compiler = new window.MINDAR.IMAGE.Compiler();
+    await compiler.compileImageTargets([imgEl], p => { fill.style.width = p.toFixed(0) + '%'; });
+    const buffer = await compiler.exportData();
+    const blob = new Blob([buffer]);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'targetsBC.mind';
+    a.click();
+    ok.style.display = 'block'; go.disabled = false;
+  };
+</script>
+</body>
+</html>

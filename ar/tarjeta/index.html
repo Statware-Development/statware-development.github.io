@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Statware · Tarjeta AR</title>
+
+<!-- A-Frame + MindAR (image tracking) -->
+<script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+<style>
+  :root{
+    --deep:#054B73; --mid:#196E9F; --light:#48A1D5;
+    --purple:#5D46AF; --midnight:#0B1B26; --mist:#F4F7FA;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent }
+  html,body{ margin:0; height:100%; background:var(--midnight); overflow:hidden;
+             font-family:'Segoe UI',system-ui,-apple-system,sans-serif; color:#fff }
+
+  /* start / permission gate */
+  #gate{ position:fixed; inset:0; z-index:30; display:flex; flex-direction:column;
+         align-items:center; justify-content:center; text-align:center; padding:32px;
+         background:
+           radial-gradient(120% 90% at 80% 0%, rgba(25,110,159,.35), transparent 60%),
+           radial-gradient(120% 90% at 0% 100%, rgba(93,70,175,.30), transparent 55%),
+           var(--midnight); }
+  #gate h1{ font-size:23px; font-weight:800; letter-spacing:-.02em; margin:22px 0 6px }
+  #gate p{ color:#9CC4DC; font-size:14px; max-width:300px; line-height:1.5; margin:0 0 26px }
+  #gate img{ width:88px; filter:drop-shadow(0 8px 24px rgba(0,0,0,.5)) }
+  #startBtn{ appearance:none; border:0; cursor:pointer;
+    background:linear-gradient(135deg,var(--mid),var(--purple));
+    color:#fff; font-size:16px; font-weight:700; letter-spacing:.02em;
+    padding:15px 34px; border-radius:100px; box-shadow:0 10px 30px rgba(25,110,159,.45) }
+  #startBtn:active{ transform:translateY(1px) }
+  .hint{ margin-top:22px; font-family:ui-monospace,Menlo,Consolas,monospace;
+         font-size:11px; letter-spacing:.12em; color:#6E869A; text-transform:uppercase }
+
+  /* scanning prompt */
+  #scan{ position:fixed; left:0; right:0; bottom:34px; z-index:20; display:none;
+         text-align:center; pointer-events:none }
+  #scan .pill{ display:inline-block; background:rgba(11,27,38,.72);
+    border:1px solid rgba(72,161,213,.5); backdrop-filter:blur(6px);
+    padding:11px 20px; border-radius:100px; font-size:13px; color:#CFE6F3 }
+  #scan .pill b{ color:#fff }
+  .reticle{ position:fixed; inset:0; z-index:10; display:none; pointer-events:none }
+  .reticle::before{ content:''; position:absolute; left:50%; top:46%;
+    width:64vw; height:40vw; max-width:340px; max-height:214px;
+    transform:translate(-50%,-50%); border-radius:14px;
+    border:2px dashed rgba(72,161,213,.55);
+    animation:breathe 2.4s ease-in-out infinite }
+  @keyframes breathe{ 0%,100%{opacity:.35} 50%{opacity:.9} }
+
+  #err{ position:fixed; inset:0; z-index:40; display:none; align-items:center;
+        justify-content:center; text-align:center; padding:32px; background:var(--midnight) }
+  #err div{ max-width:320px } #err p{ color:#9CC4DC; font-size:14px; line-height:1.6 }
+  a-scene{ z-index:1 }
+</style>
+</head>
+<body>
+
+  <!-- ===== start gate (camera needs a user gesture) ===== -->
+  <div id="gate">
+    <img id="gateLogo" alt="Statware">
+    <h1>Tarjeta AR de Statware</h1>
+    <p>Apunta la cámara al reverso de la tarjeta para ver el logo en 3D y nuestro catálogo.</p>
+    <button id="startBtn">Iniciar cámara</button>
+    <div class="hint">Point · Scan · Explore</div>
+  </div>
+
+  <div class="reticle" id="reticle"></div>
+  <div id="scan"><span class="pill">Enfoca el <b>reverso</b> de la tarjeta</span></div>
+
+  <div id="err"><div>
+    <h1>No se pudo abrir la cámara</h1>
+    <p>Revisa los permisos del navegador y que la página se abra por <b>https://</b>.
+       En iPhone usa Safari; en Android, Chrome.</p>
+  </div></div>
+
+  <!-- ===== AR scene ===== -->
+  <a-scene
+    mindar-image="imageTargetSrc: ./assets/targetsBC.mind; autoStart: false; uiScanning: no; uiLoading: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.01; warmupTolerance: 5; missTolerance: 5"
+    color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true"
+    vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+
+    <a-assets>
+      <a-asset-item id="logoGlb" src="./assets/logo3d.glb"></a-asset-item>
+      <img id="cardAR" src="./assets/prod-ar.png">
+      <img id="cardVR" src="./assets/prod-vr.png">
+      <img id="cardSW" src="./assets/prod-sw.png">
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <!-- anchor bound to the printed marker -->
+    <a-entity id="anchor" mindar-image-target="targetIndex: 0" reveal>
+
+      <!-- projector-style light that flickers during the reveal -->
+      <a-light id="projLight" type="point" color="#Bfe4ff" intensity="0"
+               position="0 0.2 0.8"></a-light>
+      <a-light type="ambient" color="#8Fb4cc" intensity="0.55"></a-light>
+      <a-light type="directional" color="#ffffff" intensity="0.9" position="1 1 1"></a-light>
+
+      <!-- flash plane behind the logo (the "reflector" burst) -->
+      <a-plane id="flash" position="0 0.05 0.02" width="1.6" height="1.6"
+               material="color: #DCF1FF; shader: flat; transparent: true; opacity: 0"
+               visible="false"></a-plane>
+
+      <!-- the 3D logo -->
+      <a-entity id="logo" gltf-model="#logoGlb"
+                position="0 0.05 0.02"
+                rotation="0 0 0"
+                scale="0.001 0.001 0.001"
+                visible="false"></a-entity>
+
+      <!-- product catalog (fans in after the pop) -->
+      <a-image class="prodcard" id="pAR" src="#cardAR"
+               position="-0.62 -0.62 0.05" rotation="0 0 0"
+               width="0.52" height="0.39" scale="0.001 0.001 0.001" visible="false"
+               material="transparent: true"></a-image>
+      <a-image class="prodcard" id="pVR" src="#cardVR"
+               position="0 -0.7 0.05"
+               width="0.52" height="0.39" scale="0.001 0.001 0.001" visible="false"
+               material="transparent: true"></a-image>
+      <a-image class="prodcard" id="pSW" src="#cardSW"
+               position="0.62 -0.62 0.05"
+               width="0.52" height="0.39" scale="0.001 0.001 0.001" visible="false"
+               material="transparent: true"></a-image>
+    </a-entity>
+  </a-scene>
+
+<script>
+  const $ = s => document.querySelector(s);
+  // brand logo on the gate (inline so it needs no extra file)
+  $('#gateLogo').src = './assets/marker.png';
+
+  /* ---------- reveal timeline component ---------- */
+  AFRAME.registerComponent('reveal', {
+    init(){
+      this.logo   = this.el.querySelector('#logo');
+      this.flash  = this.el.querySelector('#flash');
+      this.light  = this.el.querySelector('#projLight');
+      this.cards  = [...this.el.querySelectorAll('.prodcard')];
+      this.timers = [];
+      this.spinning = false;
+      this.LOGO_SCALE = 0.42;
+      this.CARD_SCALE = 1.0;
+
+      this.el.addEventListener('targetFound', () => this.play());
+      this.el.addEventListener('targetLost',  () => this.reset());
+      this.reset();
+    },
+
+    clearTimers(){ this.timers.forEach(clearTimeout); this.timers = []; },
+    at(ms, fn){ this.timers.push(setTimeout(fn, ms)); },
+
+    reset(){
+      this.clearTimers();
+      this.playing = false;
+      this.spinning = false;
+      const z = '0.001 0.001 0.001';
+      this.logo.setAttribute('visible', false);
+      this.logo.setAttribute('scale', z);
+      this.logo.removeAttribute('animation__pop');
+      this.logo.removeAttribute('animation__spin');
+      this.logo.setAttribute('rotation', '0 0 0');
+      this.flash.setAttribute('visible', false);
+      this.flash.setAttribute('material', 'opacity', 0);
+      this.light.setAttribute('light', 'intensity', 0);
+      this.cards.forEach(c => { c.setAttribute('visible', false); c.setAttribute('scale', z); });
+      $('#scan').style.display = 'block';
+      $('#reticle').style.display = 'block';
+    },
+
+    // one flicker: light burst + logo peeks
+    blink(intensity, show){
+      this.light.setAttribute('light', 'intensity', intensity);
+      this.flash.setAttribute('visible', show);
+      this.flash.setAttribute('material', 'opacity', show ? 0.85 : 0);
+      this.logo.setAttribute('visible', show);
+    },
+
+    play(){
+      if (this.playing) return;
+      this.playing = true;
+      $('#scan').style.display = 'none';
+      $('#reticle').style.display = 'none';
+
+      // keep the logo tiny but "present" for the blink peeks
+      this.logo.setAttribute('scale', `${this.LOGO_SCALE*0.55} ${this.LOGO_SCALE*0.55} ${this.LOGO_SCALE*0.55}`);
+
+      // --- old-reflector warm-up: a couple of blinks ---
+      this.at(60,  () => this.blink(2.2, true));
+      this.at(180, () => this.blink(0.0, false));
+      this.at(300, () => this.blink(3.0, true));
+      this.at(430, () => this.blink(0.0, false));
+      this.at(560, () => this.blink(3.6, true));   // holds on this one
+
+      // --- pop out (overshoot) + stabilise the projector light ---
+      this.at(560, () => {
+        this.light.setAttribute('light', 'intensity', 1.4);
+        this.flash.setAttribute('material', 'opacity', 0);
+        this.flash.setAttribute('visible', false);
+        this.logo.setAttribute('visible', true);
+        this.logo.setAttribute('animation__pop', {
+          property: 'scale',
+          from: `${this.LOGO_SCALE*0.55} ${this.LOGO_SCALE*0.55} ${this.LOGO_SCALE*0.55}`,
+          to: `${this.LOGO_SCALE} ${this.LOGO_SCALE} ${this.LOGO_SCALE}`,
+          dur: 620, easing: 'easeOutElastic'
+        });
+        // lift slightly toward the viewer as it pops
+        this.logo.setAttribute('animation__lift', {
+          property: 'position', from: '0 0.05 0.02', to: '0 0.08 0.22',
+          dur: 620, easing: 'easeOutBack'
+        });
+      });
+
+      // --- continuous rotation to show the 3D depth ---
+      this.at(1150, () => {
+        this.logo.setAttribute('animation__spin', {
+          property: 'rotation', from: '0 0 0', to: '0 360 0',
+          dur: 7000, easing: 'linear', loop: true
+        });
+        this.spinning = true;
+      });
+
+      // --- catalog fans in, staggered ---
+      const order = ['#pAR', '#pVR', '#pSW'];
+      order.forEach((sel, i) => {
+        this.at(1500 + i*260, () => {
+          const c = this.el.querySelector(sel);
+          c.setAttribute('visible', true);
+          c.setAttribute('animation__in', {
+            property: 'scale', from: '0.001 0.001 0.001',
+            to: `${this.CARD_SCALE} ${this.CARD_SCALE} ${this.CARD_SCALE}`,
+            dur: 520, easing: 'easeOutBack'
+          });
+        });
+      });
+    }
+  });
+
+  /* ---------- start / camera permission ---------- */
+  const sceneEl = $('a-scene');
+  let started = false;
+
+  async function startAR(){
+    if (started) return; started = true;
+    try{
+      const sys = sceneEl.systems['mindar-image-system'];
+      // scene may still be attaching; wait for it
+      if (!sceneEl.hasLoaded) await new Promise(r => sceneEl.addEventListener('loaded', r, {once:true}));
+      await sceneEl.systems['mindar-image-system'].start();
+      $('#gate').style.display = 'none';
+      $('#scan').style.display = 'block';
+      $('#reticle').style.display = 'block';
+    }catch(e){
+      console.error(e);
+      $('#gate').style.display = 'none';
+      $('#err').style.display = 'flex';
+    }
+  }
+  $('#startBtn').addEventListener('click', startAR);
+
+  // pause/resume camera when tab hides
+  document.addEventListener('visibilitychange', () => {
+    const sys = sceneEl.systems['mindar-image-system'];
+    if (!sys || !started) return;
+    if (document.hidden) { try{ sys.pause(true); }catch(e){} }
+    else { try{ sys.unpause(); }catch(e){} }
+  });
+</script>
+</body>
+</html>
