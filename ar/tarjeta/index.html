@@ -59,6 +59,13 @@
 </head>
 <body>
 
+  <!-- build tag: small on purpose, just enough to confirm which build a phone is
+       actually loading (vs a stale cached copy) — bump BUILD in the script below
+       on every deploy that should be visible to a tester -->
+  <div id="buildTag" style="position:fixed; top:6px; left:8px; z-index:999;
+       font-family:ui-monospace,Menlo,Consolas,monospace; font-size:9px;
+       color:rgba(255,255,255,.28); pointer-events:none; user-select:none"></div>
+
   <!-- ===== start gate (camera needs a user gesture) ===== -->
   <div id="gate">
     <img id="gateLogo" alt="Statware">
@@ -132,6 +139,14 @@
 
 <script>
   const $ = s => document.querySelector(s);
+
+  // Bump this on every deploy you want to be able to spot from the phone —
+  // compare what's on screen against the commit you just pushed to confirm
+  // the phone isn't looking at a stale cached copy.
+  const BUILD = 'v0.0';
+  $('#buildTag').textContent = BUILD;
+  console.log('[build]', BUILD);
+
   // brand logo on the gate (inline so it needs no extra file)
   $('#gateLogo').src = './assets/marker.png';
 
