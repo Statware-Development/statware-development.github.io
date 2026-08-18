@@ -75,6 +75,7 @@
     <h1>No se pudo abrir la cámara</h1>
     <p>Revisa los permisos del navegador y que la página se abra por <b>https://</b>.
        En iPhone usa Safari; en Android, Chrome.</p>
+    <p id="errDetail" style="font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; color:#6E869A; word-break:break-word"></p>
   </div></div>
 
   <!-- ===== AR scene ===== -->
@@ -244,23 +245,54 @@
   const sceneEl = $('a-scene');
   let started = false;
 
+  const withTimeout = (promise, ms, label) => Promise.race([
+    promise,
+    new Promise((_, rej) => setTimeout(() => rej(new Error(`Timeout (${ms}ms) esperando: ${label}`)), ms))
+  ]);
+
+  function fail(label, e){
+    console.error('[startAR]', label, e);
+    started = false; // allow retapping the button after a failure
+    $('#gate').style.display = 'none';
+    $('#err').style.display = 'flex';
+    const detail = e && e.message ? `${label}: ${e.name || ''} ${e.message}` : label;
+    $('#errDetail').textContent = detail;
+  }
+
   async function startAR(){
     if (started) return; started = true;
+    console.log('[startAR] tap registered');
+
+    if (!window.isSecureContext){
+      return fail('La página no está en HTTPS (isSecureContext=false)');
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      return fail('Este navegador no expone getUserMedia (¿WebView embebido, p. ej. dentro de Instagram/Facebook?)');
+    }
+
     try{
+      console.log('[startAR] waiting for scene load…');
+      if (!sceneEl.hasLoaded) await withTimeout(
+        new Promise(r => sceneEl.addEventListener('loaded', r, {once:true})),
+        8000, 'a-scene "loaded"'
+      );
+
+      console.log('[startAR] scene loaded, starting mindar-image-system…');
       const sys = sceneEl.systems['mindar-image-system'];
-      // scene may still be attaching; wait for it
-      if (!sceneEl.hasLoaded) await new Promise(r => sceneEl.addEventListener('loaded', r, {once:true}));
-      await sceneEl.systems['mindar-image-system'].start();
+      if (!sys) return fail('mindar-image-system no está registrado (¿fallaron los <script> de A-Frame/MindAR por CDN?)');
+
+      await withTimeout(sys.start(), 15000, 'mindar-image-system.start()');
+
+      console.log('[startAR] camera started ✓');
       $('#gate').style.display = 'none';
       $('#scan').style.display = 'block';
       $('#reticle').style.display = 'block';
     }catch(e){
-      console.error(e);
-      $('#gate').style.display = 'none';
-      $('#err').style.display = 'flex';
+      fail('No se pudo iniciar la cámara / el tracker', e);
     }
   }
   $('#startBtn').addEventListener('click', startAR);
+  window.addEventListener('error', e => console.error('[window.onerror]', e.message, e.filename, e.lineno));
 
   // pause/resume camera when tab hides
   document.addEventListener('visibilitychange', () => {
