@@ -5,9 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Statware · Tarjeta AR</title>
 
+<!-- If either CDN script fails to load (network/ad-blocker/offline), everything
+     below that depends on AFRAME/MINDAR would otherwise die silently and leave
+     the start button permanently inert with no visible sign. Catch it here,
+     as early as possible, and say so on screen. -->
+<script>
+  window.__cdnFailed = null;
+  function __onCdnError(which){ return () => { window.__cdnFailed = which; }; }
+</script>
 <!-- A-Frame + MindAR (image tracking) -->
-<script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe-master.min.js" onerror="__onCdnError('A-Frame (aframe-master.min.js)')()"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js" onerror="__onCdnError('MindAR (mindar-image-aframe.prod.js)')()"></script>
 
 <style>
   :root{
@@ -139,18 +147,42 @@
 
 <script>
   const $ = s => document.querySelector(s);
+  const sceneEl = $('a-scene');
+  let started = false;
 
   // Bump this on every deploy you want to be able to spot from the phone —
   // compare what's on screen against the commit you just pushed to confirm
   // the phone isn't looking at a stale cached copy.
-  const BUILD = 'v0.0';
+  const BUILD = 'v0.1';
   $('#buildTag').textContent = BUILD;
   console.log('[build]', BUILD);
 
   // brand logo on the gate (inline so it needs no extra file)
   $('#gateLogo').src = './assets/marker.png';
 
+  /* ---------- fatal-error surface ----------
+     Attached BEFORE anything that depends on AFRAME/MindAR, so a CDN load
+     failure (blocked network, ad-blocker, offline) shows a visible message
+     instead of leaving the start button silently dead — which is what was
+     happening: if AFRAME.registerComponent() threw because AFRAME never
+     loaded, every line after it — including the button's click listener —
+     never ran, and the tap did nothing with no trace of why. */
+  function fail(label, e){
+    console.error('[fail]', label, e);
+    started = false;
+    $('#gate').style.display = 'none';
+    $('#err').style.display = 'flex';
+    const detail = e && e.message ? `${label}: ${e.name || ''} ${e.message}` : label;
+    $('#errDetail').textContent = detail;
+  }
+  window.addEventListener('error', e => fail('Error de script', e.error instanceof Error ? e.error : new Error(e.message)));
+  window.addEventListener('unhandledrejection', e => fail('Promesa sin manejar', e.reason instanceof Error ? e.reason : new Error(String(e.reason))));
+  if (window.__cdnFailed){
+    fail('No se pudo cargar una librería desde el CDN', new Error(`${window.__cdnFailed} — revisa tu conexión o un bloqueador de contenido`));
+  }
+
   /* ---------- reveal timeline component ---------- */
+  try {
   AFRAME.registerComponent('reveal', {
     init(){
       this.logo   = this.el.querySelector('#logo');
@@ -255,24 +287,15 @@
       });
     }
   });
+  } catch(e){
+    fail('No se pudo registrar el componente AR (AFRAME no cargó correctamente)', e);
+  }
 
   /* ---------- start / camera permission ---------- */
-  const sceneEl = $('a-scene');
-  let started = false;
-
   const withTimeout = (promise, ms, label) => Promise.race([
     promise,
     new Promise((_, rej) => setTimeout(() => rej(new Error(`Timeout (${ms}ms) esperando: ${label}`)), ms))
   ]);
-
-  function fail(label, e){
-    console.error('[startAR]', label, e);
-    started = false; // allow retapping the button after a failure
-    $('#gate').style.display = 'none';
-    $('#err').style.display = 'flex';
-    const detail = e && e.message ? `${label}: ${e.name || ''} ${e.message}` : label;
-    $('#errDetail').textContent = detail;
-  }
 
   async function startAR(){
     if (started) return; started = true;
@@ -307,7 +330,6 @@
     }
   }
   $('#startBtn').addEventListener('click', startAR);
-  window.addEventListener('error', e => console.error('[window.onerror]', e.message, e.filename, e.lineno));
 
   // pause/resume camera when tab hides
   document.addEventListener('visibilitychange', () => {
