@@ -48,7 +48,7 @@
          Sube lerp/slerp (hasta 1) si lo quieres mas reactivo; bajalo
          (hasta 0.1) si lo quieres mas suave/con mas inercia.
          ============================================================ -->
-    <a-entity id="target-anchor" mindar-image-target="targetIndex: 0" smooth-tracker="lerp: 0.25; slerp: 0.25">
+    <a-entity id="target-anchor-0" mindar-image-target="targetIndex: 0" smooth-tracker="lerp: 0.25; slerp: 0.25">
       <!-- ============================================================
            EL MODELO. Estos tres valores son los que vas a TUNEAR:
            scale   -> tamano. Si sale gigante baja a 0.2 / 0.1;
@@ -75,6 +75,19 @@
       </a-entity>
       -->
       <!-- Luz para que el PBR del modelo se vea con volumen -->
+      <a-entity light="type: ambient; intensity: 2.5"></a-entity>
+      <a-entity light="type: directional; intensity: 1.5" position="1 2 2"></a-entity>
+      <a-entity light="type: directional; intensity: 1.0" position="-1 1 -1"></a-entity>
+    </a-entity>
+
+    <a-entity id="target-anchor-1" mindar-image-target="targetIndex: 1" smooth-tracker="lerp: 0.25; slerp: 0.25">
+      <a-gltf-model
+        src="#transformador"
+        scale="0.5 0.5 0.5"
+        rotation="0 0 0"
+        position="0 -0.5 0.2"
+        model-behavior>
+      </a-gltf-model>
       <a-entity light="type: ambient; intensity: 2.5"></a-entity>
       <a-entity light="type: directional; intensity: 1.5" position="1 2 2"></a-entity>
       <a-entity light="type: directional; intensity: 1.0" position="-1 1 -1"></a-entity>
