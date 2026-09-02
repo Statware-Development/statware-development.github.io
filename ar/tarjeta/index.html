@@ -23,7 +23,13 @@
     --purple:#5D46AF; --midnight:#0B1B26; --mist:#F4F7FA;
   }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent }
-  html,body{ margin:0; height:100%; background:var(--midnight); overflow:hidden;
+  /* No background here on purpose: MindAR's camera <video> sits behind the
+     WebGL canvas via z-index:-2, relying on nothing above it being opaque.
+     html/body are non-positioned, so an opaque background here would paint
+     *above* that negative-z-index video in stacking order (a classic CSS
+     gotcha) and hide the live camera feed behind a flat color. #gate and
+     #err already carry their own opaque backgrounds for when they're shown. */
+  html,body{ margin:0; height:100%; overflow:hidden;
              font-family:'Segoe UI',system-ui,-apple-system,sans-serif; color:#fff }
 
   /* start / permission gate */
@@ -153,7 +159,7 @@
   // Bump this on every deploy you want to be able to spot from the phone —
   // compare what's on screen against the commit you just pushed to confirm
   // the phone isn't looking at a stale cached copy.
-  const BUILD = 'v0.1';
+  const BUILD = 'v0.2';
   $('#buildTag').textContent = BUILD;
   console.log('[build]', BUILD);
 
