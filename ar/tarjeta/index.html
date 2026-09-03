@@ -44,7 +44,7 @@
            var(--midnight); }
   #gate h1{ font-size:23px; font-weight:800; letter-spacing:-.02em; margin:22px 0 6px }
   #gate p{ color:#9CC4DC; font-size:14px; max-width:300px; line-height:1.5; margin:0 0 26px }
-  #gate img{ width:88px; filter:drop-shadow(0 8px 24px rgba(0,0,0,.5)) }
+  #gate img{ width:230px; max-width:78%; filter:drop-shadow(0 8px 24px rgba(0,0,0,.5)) }
   #startBtn{ appearance:none; border:0; cursor:pointer;
     background:linear-gradient(135deg,var(--mid),var(--purple));
     color:#fff; font-size:16px; font-weight:700; letter-spacing:.02em;
@@ -191,12 +191,14 @@
   // Bump this on every deploy you want to be able to spot from the phone —
   // compare what's on screen against the commit you just pushed to confirm
   // the phone isn't looking at a stale cached copy.
-  const BUILD = 'v0.6';
+  const BUILD = 'v0.7';
   $('#buildTag').textContent = BUILD;
   console.log('[build]', BUILD);
 
-  // brand logo on the gate (inline so it needs no extra file)
-  $('#gateLogo').src = './assets/marker.png';
+  // brand logo on the gate. Deliberately NOT marker.png: that file is the
+  // tracking source compiled into targetsBC.mind, so it has to keep matching
+  // the printed card and can't be swapped for branding.
+  $('#gateLogo').src = './assets/PngLetrasBlancas.png';
 
   /* ---------- fatal-error surface ----------
      Attached BEFORE anything that depends on AFRAME/MindAR, so a CDN load
