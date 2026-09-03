@@ -138,16 +138,16 @@
       <!-- product catalog (fans in after the pop); art is square (1024x1024),
            so keep width == height or the cards render stretched -->
       <a-image class="prodcard" src="#cardAR"
-               position="-0.62 -0.62 0.05" rotation="0 0 0"
-               width="0.45" height="0.45" scale="0.001 0.001 0.001" visible="false"
+               position="-0.68 -0.66 0.05" rotation="0 0 0"
+               width="0.60" height="0.60" scale="0.001 0.001 0.001" visible="false"
                material="transparent: true"></a-image>
       <a-image class="prodcard" src="#cardVR"
-               position="0 -0.72 0.05"
-               width="0.45" height="0.45" scale="0.001 0.001 0.001" visible="false"
+               position="0 -0.78 0.05"
+               width="0.60" height="0.60" scale="0.001 0.001 0.001" visible="false"
                material="transparent: true"></a-image>
       <a-image class="prodcard" src="#cardSW"
-               position="0.62 -0.62 0.05"
-               width="0.45" height="0.45" scale="0.001 0.001 0.001" visible="false"
+               position="0.68 -0.66 0.05"
+               width="0.60" height="0.60" scale="0.001 0.001 0.001" visible="false"
                material="transparent: true"></a-image>
     </a-entity>
 
@@ -175,16 +175,16 @@
       <!-- product catalog (fans in after the pop); art is square (1024x1024),
            so keep width == height or the cards render stretched -->
       <a-image class="prodcard" src="#cardAR"
-               position="-0.62 -0.62 0.05" rotation="0 0 0"
-               width="0.45" height="0.45" scale="0.001 0.001 0.001" visible="false"
+               position="-0.68 -0.66 0.05" rotation="0 0 0"
+               width="0.60" height="0.60" scale="0.001 0.001 0.001" visible="false"
                material="transparent: true"></a-image>
       <a-image class="prodcard" src="#cardVR"
-               position="0 -0.72 0.05"
-               width="0.45" height="0.45" scale="0.001 0.001 0.001" visible="false"
+               position="0 -0.78 0.05"
+               width="0.60" height="0.60" scale="0.001 0.001 0.001" visible="false"
                material="transparent: true"></a-image>
       <a-image class="prodcard" src="#cardSW"
-               position="0.62 -0.62 0.05"
-               width="0.45" height="0.45" scale="0.001 0.001 0.001" visible="false"
+               position="0.68 -0.66 0.05"
+               width="0.60" height="0.60" scale="0.001 0.001 0.001" visible="false"
                material="transparent: true"></a-image>
     </a-entity>
   </a-scene>
@@ -197,7 +197,7 @@
   // Bump this on every deploy you want to be able to spot from the phone —
   // compare what's on screen against the commit you just pushed to confirm
   // the phone isn't looking at a stale cached copy.
-  const BUILD = 'v0.3';
+  const BUILD = 'v0.4';
   $('#buildTag').textContent = BUILD;
   console.log('[build]', BUILD);
 
@@ -264,15 +264,24 @@
       this.playing = false;
       this.spinning = false;
       const z = '0.001 0.001 0.001';
+      // Every animation re-added by runReveal() has to be removed here, not
+      // just reset: re-setting an animation component with identical data is
+      // a no-op to A-Frame's diffing, so it would never replay on a re-scan.
       this.logo.setAttribute('visible', false);
       this.logo.setAttribute('scale', z);
       this.logo.removeAttribute('animation__pop');
       this.logo.removeAttribute('animation__spin');
+      this.logo.removeAttribute('animation__lift');
+      this.logo.setAttribute('position', '0 0.05 0.02');
       this.logo.setAttribute('rotation', '0 0 0');
       this.flash.setAttribute('visible', false);
       this.flash.setAttribute('material', 'opacity', 0);
       this.light.setAttribute('light', 'intensity', 0);
-      this.cards.forEach(c => { c.setAttribute('visible', false); c.setAttribute('scale', z); });
+      this.cards.forEach(c => {
+        c.removeAttribute('animation__in');
+        c.setAttribute('visible', false);
+        c.setAttribute('scale', z);
+      });
       updateScanUI();
     },
 
