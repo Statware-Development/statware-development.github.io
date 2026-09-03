@@ -23,12 +23,15 @@
     --purple:#5D46AF; --midnight:#0B1B26; --mist:#F4F7FA;
   }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent }
-  /* No background here on purpose: MindAR's camera <video> sits behind the
-     WebGL canvas via z-index:-2, relying on nothing above it being opaque.
-     html/body are non-positioned, so an opaque background here would paint
-     *above* that negative-z-index video in stacking order (a classic CSS
-     gotcha) and hide the live camera feed behind a flat color. #gate and
-     #err already carry their own opaque backgrounds for when they're shown. */
+  /* The background goes on html ONLY, never also on body. The root's
+     background becomes the page canvas, which paints *beneath* everything —
+     including MindAR's camera <video>, which sits at z-index:-2. Put the same
+     background on body as well and body's own box paints *above* that video
+     (body is non-positioned, so it wins over negative z-index) and the camera
+     feed disappears behind a flat colour. With it on html alone we get both:
+     a dark page from the very first paint (no white flash while loading) and
+     a visible camera feed once it starts. */
+  html{ background:var(--midnight) }
   html,body{ margin:0; height:100%; overflow:hidden;
              font-family:'Segoe UI',system-ui,-apple-system,sans-serif; color:#fff }
 
@@ -103,7 +106,8 @@
   <a-scene
     mindar-image="imageTargetSrc: ./assets/targetsBC.mind; autoStart: false; uiScanning: no; uiLoading: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.01; warmupTolerance: 5; missTolerance: 5"
     color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true"
-    vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+    vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false"
+    loading-screen="enabled: false">
 
     <a-assets>
       <a-asset-item id="logoGlb" src="./assets/logo3d.glb"></a-asset-item>
@@ -197,7 +201,7 @@
   // Bump this on every deploy you want to be able to spot from the phone —
   // compare what's on screen against the commit you just pushed to confirm
   // the phone isn't looking at a stale cached copy.
-  const BUILD = 'v0.4';
+  const BUILD = 'v0.5';
   $('#buildTag').textContent = BUILD;
   console.log('[build]', BUILD);
 
