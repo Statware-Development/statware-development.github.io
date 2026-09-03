@@ -127,11 +127,6 @@
       <a-light type="ambient" color="#8Fb4cc" intensity="0.55"></a-light>
       <a-light type="directional" color="#ffffff" intensity="0.9" position="1 1 1"></a-light>
 
-      <!-- flash plane behind the logo (the "reflector" burst) -->
-      <a-plane class="flash" position="0 0.05 0.02" width="1.6" height="1.6"
-               material="color: #DCF1FF; shader: flat; transparent: true; opacity: 0"
-               visible="false"></a-plane>
-
       <!-- the 3D logo -->
       <a-entity class="logo" gltf-model="#logoGlb"
                 position="0 0.05 0.02"
@@ -163,11 +158,6 @@
                position="0 0.2 0.8"></a-light>
       <a-light type="ambient" color="#8Fb4cc" intensity="0.55"></a-light>
       <a-light type="directional" color="#ffffff" intensity="0.9" position="1 1 1"></a-light>
-
-      <!-- flash plane behind the logo (the "reflector" burst) -->
-      <a-plane class="flash" position="0 0.05 0.02" width="1.6" height="1.6"
-               material="color: #DCF1FF; shader: flat; transparent: true; opacity: 0"
-               visible="false"></a-plane>
 
       <!-- the 3D logo -->
       <a-entity class="logo" gltf-model="#logoGlb"
@@ -201,7 +191,7 @@
   // Bump this on every deploy you want to be able to spot from the phone —
   // compare what's on screen against the commit you just pushed to confirm
   // the phone isn't looking at a stale cached copy.
-  const BUILD = 'v0.5';
+  const BUILD = 'v0.6';
   $('#buildTag').textContent = BUILD;
   console.log('[build]', BUILD);
 
@@ -246,13 +236,15 @@
   AFRAME.registerComponent('reveal', {
     init(){
       this.logo   = this.el.querySelector('.logo');
-      this.flash  = this.el.querySelector('.flash');
       this.light  = this.el.querySelector('.projLight');
       this.cards  = [...this.el.querySelectorAll('.prodcard')];
       this.timers = [];
       this.spinning = false;
       this.LOGO_SCALE = 0.42;
       this.CARD_SCALE = 1.0;
+      this.EMERGE_MS  = 950;              // "medium speed" grow-out-of-the-card
+      this.START_POS  = '0 0.04 0.01';    // flat against the card face
+      this.END_POS    = '0 0.08 0.22';    // risen toward the viewer
 
       this.el.addEventListener('targetFound', () => this.runReveal());
       this.el.addEventListener('targetLost',  () => this.reset());
@@ -273,13 +265,12 @@
       // a no-op to A-Frame's diffing, so it would never replay on a re-scan.
       this.logo.setAttribute('visible', false);
       this.logo.setAttribute('scale', z);
-      this.logo.removeAttribute('animation__pop');
+      this.logo.removeAttribute('animation__grow');
+      this.logo.removeAttribute('animation__rise');
       this.logo.removeAttribute('animation__spin');
-      this.logo.removeAttribute('animation__lift');
-      this.logo.setAttribute('position', '0 0.05 0.02');
+      this.logo.setAttribute('position', this.START_POS);
       this.logo.setAttribute('rotation', '0 0 0');
-      this.flash.setAttribute('visible', false);
-      this.flash.setAttribute('material', 'opacity', 0);
+      this.light.removeAttribute('animation__glow');
       this.light.setAttribute('light', 'intensity', 0);
       this.cards.forEach(c => {
         c.removeAttribute('animation__in');
@@ -287,14 +278,6 @@
         c.setAttribute('scale', z);
       });
       updateScanUI();
-    },
-
-    // one flicker: light burst + logo peeks
-    blink(intensity, show){
-      this.light.setAttribute('light', 'intensity', intensity);
-      this.flash.setAttribute('visible', show);
-      this.flash.setAttribute('material', 'opacity', show ? 0.85 : 0);
-      this.logo.setAttribute('visible', show);
     },
 
     // NOTE: not play() — that's an A-Frame component lifecycle hook, and
@@ -307,37 +290,29 @@
       activeTargets++;
       updateScanUI();
 
-      // keep the logo tiny but "present" for the blink peeks
-      this.logo.setAttribute('scale', `${this.LOGO_SCALE*0.55} ${this.LOGO_SCALE*0.55} ${this.LOGO_SCALE*0.55}`);
+      // --- the logo grows out of the card face and rises toward the viewer ---
+      const S0 = this.LOGO_SCALE * 0.12;   // barely out of the card
+      const S1 = this.LOGO_SCALE;
+      this.logo.setAttribute('position', this.START_POS);
+      this.logo.setAttribute('scale', `${S0} ${S0} ${S0}`);
+      this.logo.setAttribute('visible', true);
 
-      // --- old-reflector warm-up: a couple of blinks ---
-      this.at(60,  () => this.blink(2.2, true));
-      this.at(180, () => this.blink(0.0, false));
-      this.at(300, () => this.blink(3.0, true));
-      this.at(430, () => this.blink(0.0, false));
-      this.at(560, () => this.blink(3.6, true));   // holds on this one
-
-      // --- pop out (overshoot) + stabilise the projector light ---
-      this.at(560, () => {
-        this.light.setAttribute('light', 'intensity', 1.4);
-        this.flash.setAttribute('material', 'opacity', 0);
-        this.flash.setAttribute('visible', false);
-        this.logo.setAttribute('visible', true);
-        this.logo.setAttribute('animation__pop', {
-          property: 'scale',
-          from: `${this.LOGO_SCALE*0.55} ${this.LOGO_SCALE*0.55} ${this.LOGO_SCALE*0.55}`,
-          to: `${this.LOGO_SCALE} ${this.LOGO_SCALE} ${this.LOGO_SCALE}`,
-          dur: 620, easing: 'easeOutElastic'
-        });
-        // lift slightly toward the viewer as it pops
-        this.logo.setAttribute('animation__lift', {
-          property: 'position', from: '0 0.05 0.02', to: '0 0.08 0.22',
-          dur: 620, easing: 'easeOutBack'
-        });
+      this.logo.setAttribute('animation__grow', {
+        property: 'scale', from: `${S0} ${S0} ${S0}`, to: `${S1} ${S1} ${S1}`,
+        dur: this.EMERGE_MS, easing: 'easeOutCubic'
+      });
+      this.logo.setAttribute('animation__rise', {
+        property: 'position', from: this.START_POS, to: this.END_POS,
+        dur: this.EMERGE_MS, easing: 'easeOutQuad'
+      });
+      // light comes up with it instead of flickering
+      this.light.setAttribute('animation__glow', {
+        property: 'light.intensity', from: 0, to: 1.4,
+        dur: this.EMERGE_MS, easing: 'easeOutQuad'
       });
 
       // --- continuous rotation to show the 3D depth ---
-      this.at(1150, () => {
+      this.at(this.EMERGE_MS + 80, () => {
         this.logo.setAttribute('animation__spin', {
           property: 'rotation', from: '0 0 0', to: '0 360 0',
           dur: 7000, easing: 'linear', loop: true
@@ -347,7 +322,7 @@
 
       // --- catalog fans in, staggered (this.cards is in DOM order: AR, VR, SW) ---
       this.cards.forEach((c, i) => {
-        this.at(1500 + i*260, () => {
+        this.at(this.EMERGE_MS + 320 + i*260, () => {
           c.setAttribute('visible', true);
           c.setAttribute('animation__in', {
             property: 'scale', from: '0.001 0.001 0.001',
