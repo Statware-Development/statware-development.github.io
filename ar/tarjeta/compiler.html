@@ -4,7 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Statware · Compilar marcador (.mind)</title>
-<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js"></script>
+<!-- ESM bundle: needs type="module". Loaded as a classic script it throws
+     "Cannot use import statement outside a module" and never defines
+     window.MINDAR, leaving the compile button dead. -->
+<script type="module" src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js"></script>
 <style>
   :root{ --deep:#054B73; --mid:#196E9F; --purple:#5D46AF; --midnight:#0B1B26 }
   body{ margin:0; min-height:100vh; background:
@@ -28,16 +31,24 @@
   .ok{ color:#7FE0A6; font-size:13px; margin-top:12px; display:none }
   code{ font-family:ui-monospace,Menlo,Consolas,monospace; background:rgba(0,0,0,.35);
         padding:2px 6px; border-radius:5px; font-size:12px }
+  .item{ display:flex; justify-content:space-between; gap:10px; margin-top:8px;
+         font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px;
+         color:#CFE6F3; background:rgba(0,0,0,.25); padding:7px 10px; border-radius:8px }
+  .item span{ color:#6E869A }
 </style>
 </head>
 <body>
   <div class="card">
     <h1>Compilar marcador AR</h1>
-    <p>Sube la imagen del marcador (<code>assets/marker.png</code>) y descarga el archivo
-       <code>targetsBC.mind</code>. Guárdalo en <code>assets/</code> junto a <code>index.html</code>.</p>
+    <p>Sube <b>en orden</b> las imágenes de los marcadores y descarga
+       <code>targetsBC.mind</code>. Guárdalo en <code>assets/</code> junto a
+       <code>index.html</code>. El orden define el <code>targetIndex</code> que
+       usa <code>index.html</code>:
+       <br>0 = <code>assets/marker.png</code> · 1 = <code>assets/AtrasTP.png</code></p>
 
-    <div class="drop" id="drop">Arrastra la imagen aquí o toca para elegir</div>
-    <input id="file" type="file" accept="image/*" hidden>
+    <div class="drop" id="drop">Arrastra las imágenes aquí o toca para elegir</div>
+    <input id="file" type="file" accept="image/*" multiple hidden>
+    <div id="list"></div>
     <img id="preview" class="preview" hidden>
     <div class="bar" id="bar"><i id="fill"></i></div>
     <button id="go" disabled>Compilar y descargar .mind</button>
@@ -48,29 +59,46 @@
   const $ = s => document.querySelector(s);
   const drop=$('#drop'), file=$('#file'), preview=$('#preview'),
         go=$('#go'), bar=$('#bar'), fill=$('#fill'), ok=$('#ok');
-  let imgEl = null;
+  const list = $('#list');
+  let imgs = [];   // ordered: position in this array == targetIndex
 
-  const load = f => {
+  const renderList = () => {
+    list.innerHTML = imgs.map((im, i) =>
+      `<div class="item">${i} · ${im.name} <span>${im.el.width}×${im.el.height}</span></div>`
+    ).join('');
+    go.disabled = imgs.length === 0;
+  };
+
+  // Load strictly in sequence: position in `imgs` becomes the targetIndex, so
+  // parallel FileReaders finishing out of order would silently swap the targets.
+  const load = f => new Promise(resolve => {
     const r = new FileReader();
     r.onload = e => {
       preview.src = e.target.result; preview.hidden = false;
       const im = new Image();
-      im.onload = () => { imgEl = im; go.disabled = false; };
+      im.onload  = () => { imgs.push({ name: f.name, el: im }); renderList(); resolve(); };
+      im.onerror = () => resolve();
       im.src = e.target.result;
     };
+    r.onerror = () => resolve();
     r.readAsDataURL(f);
-  };
+  });
+  const loadAll = async fileList => { for (const f of [...fileList]) await load(f); };
   drop.onclick = () => file.click();
-  file.onchange = e => e.target.files[0] && load(e.target.files[0]);
+  file.onchange = e => e.target.files.length && loadAll(e.target.files);
   ['dragover','dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('hot'); }));
   ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('hot'); }));
-  drop.addEventListener('drop', e => e.dataTransfer.files[0] && load(e.dataTransfer.files[0]));
+  drop.addEventListener('drop', e => e.dataTransfer.files.length && loadAll(e.dataTransfer.files));
 
   go.onclick = async () => {
-    if (!imgEl) return;
+    if (!imgs.length) return;
+    if (!window.MINDAR || !window.MINDAR.IMAGE) {
+      alert('MindAR no cargó (revisa la conexión o un bloqueador de contenido).');
+      return;
+    }
     go.disabled = true; bar.style.display = 'block'; ok.style.display = 'none';
     const compiler = new window.MINDAR.IMAGE.Compiler();
-    await compiler.compileImageTargets([imgEl], p => { fill.style.width = p.toFixed(0) + '%'; });
+    await compiler.compileImageTargets(imgs.map(i => i.el), p => { fill.style.width = p.toFixed(0) + '%'; });
     const buffer = await compiler.exportData();
     const blob = new Blob([buffer]);
     const a = document.createElement('a');

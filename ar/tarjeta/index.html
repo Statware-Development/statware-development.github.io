@@ -114,39 +114,77 @@
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- anchor bound to the printed marker -->
-    <a-entity id="anchor" mindar-image-target="targetIndex: 0" reveal>
+    <!-- target 0 — reverso de la tarjeta (assets/marker.png) -->
+    <a-entity class="anchor" mindar-image-target="targetIndex: 0" reveal>
 
       <!-- projector-style light that flickers during the reveal -->
-      <a-light id="projLight" type="point" color="#Bfe4ff" intensity="0"
+      <a-light class="projLight" type="point" color="#Bfe4ff" intensity="0"
                position="0 0.2 0.8"></a-light>
       <a-light type="ambient" color="#8Fb4cc" intensity="0.55"></a-light>
       <a-light type="directional" color="#ffffff" intensity="0.9" position="1 1 1"></a-light>
 
       <!-- flash plane behind the logo (the "reflector" burst) -->
-      <a-plane id="flash" position="0 0.05 0.02" width="1.6" height="1.6"
+      <a-plane class="flash" position="0 0.05 0.02" width="1.6" height="1.6"
                material="color: #DCF1FF; shader: flat; transparent: true; opacity: 0"
                visible="false"></a-plane>
 
       <!-- the 3D logo -->
-      <a-entity id="logo" gltf-model="#logoGlb"
+      <a-entity class="logo" gltf-model="#logoGlb"
                 position="0 0.05 0.02"
                 rotation="0 0 0"
                 scale="0.001 0.001 0.001"
                 visible="false"></a-entity>
 
-      <!-- product catalog (fans in after the pop) -->
-      <a-image class="prodcard" id="pAR" src="#cardAR"
+      <!-- product catalog (fans in after the pop); art is square (1024x1024),
+           so keep width == height or the cards render stretched -->
+      <a-image class="prodcard" src="#cardAR"
                position="-0.62 -0.62 0.05" rotation="0 0 0"
-               width="0.52" height="0.39" scale="0.001 0.001 0.001" visible="false"
+               width="0.45" height="0.45" scale="0.001 0.001 0.001" visible="false"
                material="transparent: true"></a-image>
-      <a-image class="prodcard" id="pVR" src="#cardVR"
-               position="0 -0.7 0.05"
-               width="0.52" height="0.39" scale="0.001 0.001 0.001" visible="false"
+      <a-image class="prodcard" src="#cardVR"
+               position="0 -0.72 0.05"
+               width="0.45" height="0.45" scale="0.001 0.001 0.001" visible="false"
                material="transparent: true"></a-image>
-      <a-image class="prodcard" id="pSW" src="#cardSW"
+      <a-image class="prodcard" src="#cardSW"
                position="0.62 -0.62 0.05"
-               width="0.52" height="0.39" scale="0.001 0.001 0.001" visible="false"
+               width="0.45" height="0.45" scale="0.001 0.001 0.001" visible="false"
+               material="transparent: true"></a-image>
+    </a-entity>
+
+    <!-- target 1 — AtrasTP (assets/AtrasTP.png); misma secuencia de reveal -->
+    <a-entity class="anchor" mindar-image-target="targetIndex: 1" reveal>
+
+      <!-- projector-style light that flickers during the reveal -->
+      <a-light class="projLight" type="point" color="#Bfe4ff" intensity="0"
+               position="0 0.2 0.8"></a-light>
+      <a-light type="ambient" color="#8Fb4cc" intensity="0.55"></a-light>
+      <a-light type="directional" color="#ffffff" intensity="0.9" position="1 1 1"></a-light>
+
+      <!-- flash plane behind the logo (the "reflector" burst) -->
+      <a-plane class="flash" position="0 0.05 0.02" width="1.6" height="1.6"
+               material="color: #DCF1FF; shader: flat; transparent: true; opacity: 0"
+               visible="false"></a-plane>
+
+      <!-- the 3D logo -->
+      <a-entity class="logo" gltf-model="#logoGlb"
+                position="0 0.05 0.02"
+                rotation="0 0 0"
+                scale="0.001 0.001 0.001"
+                visible="false"></a-entity>
+
+      <!-- product catalog (fans in after the pop); art is square (1024x1024),
+           so keep width == height or the cards render stretched -->
+      <a-image class="prodcard" src="#cardAR"
+               position="-0.62 -0.62 0.05" rotation="0 0 0"
+               width="0.45" height="0.45" scale="0.001 0.001 0.001" visible="false"
+               material="transparent: true"></a-image>
+      <a-image class="prodcard" src="#cardVR"
+               position="0 -0.72 0.05"
+               width="0.45" height="0.45" scale="0.001 0.001 0.001" visible="false"
+               material="transparent: true"></a-image>
+      <a-image class="prodcard" src="#cardSW"
+               position="0.62 -0.62 0.05"
+               width="0.45" height="0.45" scale="0.001 0.001 0.001" visible="false"
                material="transparent: true"></a-image>
     </a-entity>
   </a-scene>
@@ -159,7 +197,7 @@
   // Bump this on every deploy you want to be able to spot from the phone —
   // compare what's on screen against the commit you just pushed to confirm
   // the phone isn't looking at a stale cached copy.
-  const BUILD = 'v0.2';
+  const BUILD = 'v0.3';
   $('#buildTag').textContent = BUILD;
   console.log('[build]', BUILD);
 
@@ -187,20 +225,32 @@
     fail('No se pudo cargar una librería desde el CDN', new Error(`${window.__cdnFailed} — revisa tu conexión o un bloqueador de contenido`));
   }
 
+  /* ---------- shared scanning UI ----------
+     Two anchors (one per target) share #scan/#reticle, so track how many
+     targets are currently found instead of letting each anchor toggle the
+     UI on its own — otherwise one target being lost would re-show the
+     "point at the card" prompt while the other is still being tracked. */
+  let activeTargets = 0;
+  function updateScanUI(){
+    const show = activeTargets === 0;
+    $('#scan').style.display = show ? 'block' : 'none';
+    $('#reticle').style.display = show ? 'block' : 'none';
+  }
+
   /* ---------- reveal timeline component ---------- */
   try {
   AFRAME.registerComponent('reveal', {
     init(){
-      this.logo   = this.el.querySelector('#logo');
-      this.flash  = this.el.querySelector('#flash');
-      this.light  = this.el.querySelector('#projLight');
+      this.logo   = this.el.querySelector('.logo');
+      this.flash  = this.el.querySelector('.flash');
+      this.light  = this.el.querySelector('.projLight');
       this.cards  = [...this.el.querySelectorAll('.prodcard')];
       this.timers = [];
       this.spinning = false;
       this.LOGO_SCALE = 0.42;
       this.CARD_SCALE = 1.0;
 
-      this.el.addEventListener('targetFound', () => this.play());
+      this.el.addEventListener('targetFound', () => this.runReveal());
       this.el.addEventListener('targetLost',  () => this.reset());
       this.reset();
     },
@@ -210,6 +260,7 @@
 
     reset(){
       this.clearTimers();
+      if (this.playing) activeTargets = Math.max(0, activeTargets - 1);
       this.playing = false;
       this.spinning = false;
       const z = '0.001 0.001 0.001';
@@ -222,8 +273,7 @@
       this.flash.setAttribute('material', 'opacity', 0);
       this.light.setAttribute('light', 'intensity', 0);
       this.cards.forEach(c => { c.setAttribute('visible', false); c.setAttribute('scale', z); });
-      $('#scan').style.display = 'block';
-      $('#reticle').style.display = 'block';
+      updateScanUI();
     },
 
     // one flicker: light burst + logo peeks
@@ -234,11 +284,15 @@
       this.logo.setAttribute('visible', show);
     },
 
-    play(){
+    // NOTE: not play() — that's an A-Frame component lifecycle hook, and
+    // A-Frame calls it automatically when the scene starts playing, which
+    // ran this whole timeline once before any marker was ever seen (leaving
+    // the first real scan with nothing left to animate).
+    runReveal(){
       if (this.playing) return;
       this.playing = true;
-      $('#scan').style.display = 'none';
-      $('#reticle').style.display = 'none';
+      activeTargets++;
+      updateScanUI();
 
       // keep the logo tiny but "present" for the blink peeks
       this.logo.setAttribute('scale', `${this.LOGO_SCALE*0.55} ${this.LOGO_SCALE*0.55} ${this.LOGO_SCALE*0.55}`);
@@ -278,11 +332,9 @@
         this.spinning = true;
       });
 
-      // --- catalog fans in, staggered ---
-      const order = ['#pAR', '#pVR', '#pSW'];
-      order.forEach((sel, i) => {
+      // --- catalog fans in, staggered (this.cards is in DOM order: AR, VR, SW) ---
+      this.cards.forEach((c, i) => {
         this.at(1500 + i*260, () => {
-          const c = this.el.querySelector(sel);
           c.setAttribute('visible', true);
           c.setAttribute('animation__in', {
             property: 'scale', from: '0.001 0.001 0.001',
@@ -329,8 +381,7 @@
 
       console.log('[startAR] camera started ✓');
       $('#gate').style.display = 'none';
-      $('#scan').style.display = 'block';
-      $('#reticle').style.display = 'block';
+      updateScanUI();
     }catch(e){
       fail('No se pudo iniciar la cámara / el tracker', e);
     }
